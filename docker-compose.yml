@@ -1,0 +1,75 @@
+version: "3.9"
+
+name: aa-platform
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: aa-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: aa_user
+      POSTGRES_PASSWORD: aa_password
+      POSTGRES_DB: aa_platform
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - aa-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aa_user -d aa_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: aa-redis
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - aa-network
+
+    command: redis-server --appendonly yes
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aa-pgadmin
+    restart: unless-stopped
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@aa.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+
+    ports:
+      - "5050:80"
+
+    depends_on:
+      - postgres
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    networks:
+      - aa-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  aa-network:
+    driver: bridge
