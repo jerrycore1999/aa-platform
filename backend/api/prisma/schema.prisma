@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DeploymentStatus {
+  QUEUED
+  CLONING
+  BUILDING
+  STARTING
+  RUNNING
+  FAILED
+  STOPPED
+}
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+model User {
+  id String @id @default(cuid())
+
+  email        String  @unique
+  passwordHash String?
+  refreshToken String?
+
+  firstName String?
+  lastName  String?
+  phone     String? @unique
+
+  isVerified Boolean @default(false)
+  isActive   Boolean @default(true)
+
+  // Verification Flags
+  aadhaarVerified      Boolean @default(false)
+  phoneVerified        Boolean @default(false)
+  faceVerified         Boolean @default(false)
+  governmentIdVerified Boolean @default(false)
+
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+
+  // Trust
+  trustScore Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  verification Verification?
+}
+
+model Verification {
+  id String @id @default(cuid())
+
+  userId String @unique
+
+  aadhaarHash  String?
+  aadhaarLast4 String?
+
+  aadhaarFront String?
+  aadhaarBack  String?
+
+  selfieImage String?
+
+  status VerificationStatus @default(PENDING)
+
+  reviewedBy String?
+  reviewedAt DateTime?
+
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Deployment {
+  id          String           @id @default(cuid())
+  prNumber    Int
+  owner       String
+  repository  String
+  branch      String
+  workspace   String
+  imageName   String
+  containerId String
+  port        Int
+  previewUrl  String
+  status      DeploymentStatus @default(QUEUED)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  logs DeploymentLog[]
+}
+model DeploymentLog {
+  id           String   @id @default(cuid())
+
+  deploymentId String
+
+  level        LogLevel
+  message      String
+
+  createdAt    DateTime @default(now())
+
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+}
